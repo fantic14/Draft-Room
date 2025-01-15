@@ -1,0 +1,102 @@
+package raf.draft.dsw.controller.actions;
+
+import raf.draft.dsw.controller.messagegenerator.MessageGenerator;
+import raf.draft.dsw.core.ApplicationFramework;
+import raf.draft.dsw.gui.swing.MainFrame;
+import raf.draft.dsw.gui.swing.tree.model.DraftTreeItem;
+import raf.draft.dsw.model.messages.MessageType;
+import raf.draft.dsw.model.nodes.DraftNode;
+import raf.draft.dsw.model.repository.DraftRoomChildrenRepository;
+import raf.draft.dsw.model.structures.Project;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+
+public class AuthorNamePathAction extends AbstractRoomAction{
+
+    public AuthorNamePathAction() {
+        putValue(SMALL_ICON, loadIcon("/images/projectChanger.png"));
+        putValue(NAME, "Change Project");
+        putValue(SHORT_DESCRIPTION, "Change Project");
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent a) {
+
+        DraftTreeItem selected = MainFrame.getInstance().getDraftTree().getSelectedNode();
+
+        if (selected == null || !(selected.getDraftNode() instanceof Project)){
+            MessageGenerator mg = new MessageGenerator();
+            mg.generateMessage("SELECT_PROJECT_FIRST", MessageType.NOTIFICATION);
+            return;
+        }
+
+        JFrame frame = new JFrame();
+        Toolkit kit = Toolkit.getDefaultToolkit();
+        Dimension screenSize = kit.getScreenSize();
+        int screenHeight = screenSize.height;
+        int screenWidth = screenSize.width;
+        frame.setSize(screenWidth/3, screenHeight/3);
+        frame.setLocationRelativeTo(null);
+        frame.setTitle("Change Project");
+        frame.setResizable(false);
+        JPanel panel = new JPanel(new GridLayout(7,1));
+
+        JLabel lbName = new JLabel("Project name:");
+        JTextField tfName = new JTextField();
+
+        JLabel lbAuthor = new JLabel("Author:");
+        JTextField tfAuthor = new JTextField();
+
+        JLabel lbPath = new JLabel("Choose project path:");
+        JTextField tfPath = new JTextField();
+
+        JButton btnCancel = new JButton("Cancel");
+        btnCancel.addActionListener(l -> frame.setVisible(false));
+
+        JButton btnConfirm = new JButton("Confirm");
+        btnConfirm.addActionListener(l -> {
+            if (!(tfName.getText().isBlank())) {
+                for (DraftNode node:DraftRoomChildrenRepository.getInstance().getNodes()){
+                    if (node.getName().equals(tfName.getText())){
+                        MessageGenerator mg = new MessageGenerator();
+                        mg.generateMessage("CANNOT_HAVE_SAME_NAME_AS_OTHER_NODE", MessageType.NOTIFICATION);
+                        return;
+                    }
+                }
+                selected.getDraftNode().setName(tfName.getText());
+            }
+            if (!(tfAuthor.getText().isBlank()))
+                ((Project) selected.getDraftNode()).setAuthor(tfAuthor.getText());
+            if (!(tfPath.getText().isBlank())) {
+                for (DraftNode node:DraftRoomChildrenRepository.getInstance().getNodes()){
+                    if (node instanceof Project && node.getName().equals(tfName.getText())){
+                        MessageGenerator mg = new MessageGenerator();
+                        mg.generateMessage("CANNOT_HAVE_SAME_NAME_AS_OTHER_NODE", MessageType.NOTIFICATION);
+                        return;
+                    }
+                }
+                ((Project) selected.getDraftNode()).setPath(tfPath.getText());
+            }
+            frame.setVisible(false);
+            SwingUtilities.updateComponentTreeUI(MainFrame.getInstance());
+        });
+
+        JPanel confirmCancelPanel = new JPanel(new GridLayout(1,2));
+        confirmCancelPanel.add(btnCancel);
+        confirmCancelPanel.add(btnConfirm);
+
+        panel.add(lbName);
+        panel.add(tfName);
+        panel.add(lbAuthor);
+        panel.add(tfAuthor);
+        panel.add(lbPath);
+        panel.add(tfPath);
+        panel.add(confirmCancelPanel);
+
+        frame.add(panel);
+        frame.setVisible(true);
+
+    }
+}
